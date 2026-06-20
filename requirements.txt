@@ -1,4 +1,4 @@
 flask==3.0.0
 flask-cors==4.0.0
-gensim==4.3.2
 numpy==1.26.4
+ 
