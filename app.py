@@ -49,6 +49,59 @@ BLOCKLIST = {
     'had','may',
 }
 
+# Curated pool of concrete, guessable nouns — animals, food, nature, objects, etc.
+# These are guaranteed to be fun game words. Similarity still uses the full GloVe vocab.
+CURATED_WORDS = {
+    'amber', 'ankle', 'ant', 'ape', 'apple', 'arm', 'ash', 'avocado', 'backpack', 'bacon',
+    'bag', 'ball', 'banana', 'bark', 'barn', 'baseball', 'basil', 'basket', 'bass', 'bat',
+    'bath', 'bathroom', 'battery', 'beach', 'bear', 'beaver', 'bed', 'bedroom', 'bee', 'beef',
+    'beetle', 'belt', 'bicycle', 'bike', 'birch', 'bird', 'blizzard', 'blueberry', 'board', 'boat',
+    'bolt', 'bone', 'book', 'boots', 'bowl', 'boxing', 'bracelet', 'brain', 'branch', 'bread',
+    'bridge', 'broccoli', 'broom', 'brush', 'bubble', 'bucket', 'burger', 'bus', 'bush', 'butter',
+    'butterfly', 'button', 'cabbage', 'cable', 'cake', 'calf', 'camel', 'canvas', 'canyon', 'cap',
+    'car', 'caramel', 'card', 'carrot', 'castle', 'cat', 'catfish', 'cave', 'cedar', 'ceiling',
+    'celery', 'chain', 'chair', 'charger', 'cheek', 'cheese', 'cherry', 'chess', 'chest', 'chicken',
+    'chili', 'chin', 'chocolate', 'church', 'city', 'cliff', 'clock', 'cloud', 'clover', 'coat',
+    'coconut', 'coffee', 'comb', 'cookie', 'coral', 'corn', 'cotton', 'court', 'cow', 'crab',
+    'cream', 'cricket', 'crow', 'crystal', 'cucumber', 'cup', 'cycling', 'daisy', 'deer', 'desert',
+    'desk', 'dew', 'diamond', 'dice', 'dock', 'dog', 'dolphin', 'donut', 'door', 'dove',
+    'dress', 'drill', 'drum', 'duck', 'dust', 'eagle', 'ear', 'earring', 'egg', 'elbow',
+    'elephant', 'elm', 'ember', 'eye', 'face', 'factory', 'farm', 'fern', 'field', 'finger',
+    'fish', 'flame', 'flamingo', 'flood', 'floor', 'flour', 'flower', 'flute', 'foam', 'fog',
+    'foot', 'football', 'forest', 'fork', 'fox', 'fridge', 'frog', 'frost', 'fruit', 'garage',
+    'garden', 'garlic', 'ginger', 'giraffe', 'glacier', 'glass', 'glasses', 'gloves', 'glue', 'goal',
+    'goat', 'golf', 'goose', 'gorilla', 'grape', 'grass', 'guitar', 'hail', 'hair', 'ham',
+    'hammer', 'hamster', 'hand', 'harp', 'hat', 'hawk', 'head', 'heart', 'heel', 'hen',
+    'highway', 'hip', 'hippo', 'hockey', 'honey', 'hoodie', 'hoop', 'horse', 'hospital', 'house',
+    'hurricane', 'ice', 'island', 'ivory', 'jacket', 'jaw', 'jeans', 'jellyfish', 'juice', 'jungle',
+    'kangaroo', 'ketchup', 'keyboard', 'kidney', 'king', 'kitchen', 'kitten', 'knee', 'knife', 'koala',
+    'ladder', 'lake', 'lamb', 'lamp', 'leaf', 'leg', 'lemon', 'lettuce', 'lightning', 'lily',
+    'lime', 'lion', 'lip', 'liver', 'lobster', 'lung', 'mango', 'maple', 'meadow', 'melon',
+    'milk', 'mint', 'mirror', 'mist', 'monkey', 'moon', 'mop', 'motorcycle', 'mountain', 'mouse',
+    'mouth', 'muffin', 'muscle', 'mushroom', 'mustard', 'nail', 'neck', 'necklace', 'net', 'noodle',
+    'nose', 'notebook', 'nut', 'oak', 'ocean', 'octopus', 'onion', 'orange', 'orchid', 'otter',
+    'oven', 'owl', 'paint', 'pan', 'pancake', 'panda', 'pants', 'paper', 'park', 'parrot',
+    'pasta', 'path', 'peach', 'pear', 'pearl', 'pelican', 'pen', 'pencil', 'penguin', 'pepper',
+    'petal', 'phone', 'piano', 'pie', 'pig', 'pigeon', 'pine', 'pineapple', 'pizza', 'plane',
+    'planet', 'plate', 'plug', 'plum', 'pond', 'pool', 'poppy', 'pork', 'pot', 'potato',
+    'puppy', 'purse', 'queen', 'rabbit', 'raccoon', 'racket', 'rain', 'rainbow', 'raspberry', 'rat',
+    'razor', 'rhino', 'rice', 'ring', 'river', 'road', 'robin', 'rock', 'roof', 'rooster',
+    'root', 'rope', 'rose', 'ruby', 'rugby', 'ruler', 'runway', 'salad', 'salmon', 'salt',
+    'sand', 'sandals', 'sandwich', 'sauce', 'sausage', 'saw', 'scarf', 'school', 'scissors', 'screen',
+    'screw', 'sea', 'seal', 'seed', 'shadow', 'shampoo', 'shark', 'sheep', 'shelf', 'ship',
+    'shirt', 'shoes', 'shorts', 'shoulder', 'shower', 'shrimp', 'silk', 'sink', 'skin', 'skirt',
+    'skunk', 'smoke', 'snail', 'snake', 'sneakers', 'snow', 'soap', 'soccer', 'socks', 'sofa',
+    'soil', 'soup', 'spark', 'sparrow', 'spider', 'spinach', 'spoon', 'squid', 'squirrel', 'stairs',
+    'star', 'starfish', 'stew', 'stomach', 'stone', 'storm', 'stove', 'strawberry', 'stream', 'street',
+    'sugar', 'suit', 'sun', 'sunflower', 'sunrise', 'swamp', 'sweater', 'switch', 'table', 'tape',
+    'tennis', 'thorn', 'thumb', 'thunder', 'tiger', 'toe', 'toilet', 'tomato', 'tongue', 'tooth',
+    'toothbrush', 'tornado', 'towel', 'tower', 'town', 'train', 'tree', 'trout', 'truck', 'trumpet',
+    'trunk', 'tulip', 'tuna', 'tunnel', 'turkey', 'turtle', 'valley', 'vanilla', 'velvet', 'vest',
+    'village', 'vine', 'violet', 'violin', 'volcano', 'waffle', 'wall', 'wallet', 'wasp', 'watch',
+    'water', 'wave', 'whale', 'wheat', 'willow', 'wind', 'window', 'wire', 'wolf', 'wool',
+    'worm', 'wrench', 'wrist', 'yogurt', 'zebra',
+}
+
 def load_vectors():
     global VALID_WORDS, MATRIX_NORM, WORD_TO_IDX, GAME_POOL, ready
 
@@ -95,17 +148,16 @@ def load_vectors():
     norm_matrix = matrix / norms
     del matrix; gc.collect()
 
+    # Game pool = only curated concrete nouns that are in the GloVe vocab
+    word_to_idx_tmp = {w: i for i, w in enumerate(words)}
     game_pool = [
-        i for i, w in enumerate(words)
-        if i < 40000
-        and 4 <= len(w) <= 10
-        and w not in BLOCKLIST
-        and not any(w.endswith(s) for s in BAD_SUFFIXES)
+        word_to_idx_tmp[w] for w in CURATED_WORDS
+        if w in word_to_idx_tmp
     ]
 
     VALID_WORDS = words
     MATRIX_NORM = norm_matrix
-    WORD_TO_IDX = {w: i for i, w in enumerate(words)}
+    WORD_TO_IDX = word_to_idx_tmp
     GAME_POOL   = game_pool
     ready       = True
     print(f"[Contexto] Ready — {len(VALID_WORDS):,} words, {len(GAME_POOL):,} game words.", flush=True)
