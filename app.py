@@ -1,7 +1,12 @@
 """
 Contexto-style word similarity service.
 GloVe 6B 50d, full filtered vocabulary.
-Startup downloads in background so Railway health check passes immediately.
+
+Key design: NO pre-computed rank arrays.
+On each /guess we compute that single word's rank on the fly:
+  - one dot product across all words  (fast)
+  - count how many words scored higher (fast)
+This uses almost no extra memory per round and never spikes CPU at round-start.
 """
 
 import os, random, string, uuid, zipfile, gc, urllib.request, threading
@@ -17,13 +22,12 @@ GLOVE_FILE = "glove.6B.50d.txt"
 CACHE_DIR  = "/tmp/glove_cache"
 CACHE_PATH = os.path.join(CACHE_DIR, GLOVE_FILE)
 
-# ── Global state ──────────────────────────────────────────────────────────────
-VALID_WORDS  = []
-MATRIX_NORM  = None
-WORD_TO_IDX  = {}
-GAME_POOL    = []
-ready        = False   # True once vectors are loaded
-rounds       = {}
+VALID_WORDS = []
+MATRIX_NORM = None
+WORD_TO_IDX = {}
+GAME_POOL   = []
+ready       = False
+rounds      = {}   # round_id -> { secret_word, secret_vec }
 
 BAD_SUFFIXES = (
     'ing','tion','sion','ment','ness','ity','ism','ize','ise','ify',
@@ -45,11 +49,9 @@ BLOCKLIST = {
     'had','may',
 }
 
-# ── Download + load in a background thread ────────────────────────────────────
 def load_vectors():
     global VALID_WORDS, MATRIX_NORM, WORD_TO_IDX, GAME_POOL, ready
 
-    # 1. Download if needed
     os.makedirs(CACHE_DIR, exist_ok=True)
     if not os.path.exists(CACHE_PATH):
         print("[Contexto] Downloading GloVe zip (one-time)...", flush=True)
@@ -71,7 +73,6 @@ def load_vectors():
     else:
         print("[Contexto] Using cached GloVe file.", flush=True)
 
-    # 2. Load vectors
     print("[Contexto] Loading vectors...", flush=True)
     words, vectors = [], []
     try:
@@ -94,8 +95,6 @@ def load_vectors():
     norm_matrix = matrix / norms
     del matrix; gc.collect()
 
-    word_to_idx = {w: i for i, w in enumerate(words)}
-
     game_pool = [
         i for i, w in enumerate(words)
         if i < 40000
@@ -104,33 +103,30 @@ def load_vectors():
         and not any(w.endswith(s) for s in BAD_SUFFIXES)
     ]
 
-    # Assign to globals atomically
-    VALID_WORDS  = words
-    MATRIX_NORM  = norm_matrix
-    WORD_TO_IDX  = word_to_idx
-    GAME_POOL    = game_pool
-    ready        = True
+    VALID_WORDS = words
+    MATRIX_NORM = norm_matrix
+    WORD_TO_IDX = {w: i for i, w in enumerate(words)}
+    GAME_POOL   = game_pool
+    ready       = True
     print(f"[Contexto] Ready — {len(VALID_WORDS):,} words, {len(GAME_POOL):,} game words.", flush=True)
 
-# Start loading immediately in background
 threading.Thread(target=load_vectors, daemon=True).start()
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-def build_rankings(secret_idx):
-    secret_vec = MATRIX_NORM[secret_idx]
-    sims       = MATRIX_NORM @ secret_vec
-    order      = np.argsort(-sims)
-    ranks      = np.empty(len(VALID_WORDS), dtype=np.int32)
-    for rank, idx in enumerate(order):
-        ranks[idx] = rank + 1
-    return ranks
+def get_rank(secret_vec, guess_idx):
+    """
+    Rank of the guessed word relative to the secret word.
+    = number of words with HIGHER similarity than the guess + 1.
+    No sorting needed — just a dot product and a count.
+    """
+    guess_sim = float(MATRIX_NORM[guess_idx] @ secret_vec)
+    all_sims  = MATRIX_NORM @ secret_vec
+    rank      = int(np.sum(all_sims > guess_sim)) + 1
+    return rank
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
 @app.route("/health", methods=["GET"])
 def health():
-    # Always returns 200 so Railway considers the service up
-    return jsonify({"status": "ok" if ready else "loading", "ready": ready,
-                    "words_loaded": len(VALID_WORDS)})
+    return jsonify({"status": "ok" if ready else "loading",
+                    "ready": ready, "words_loaded": len(VALID_WORDS)})
 
 @app.route("/", methods=["GET"])
 def index():
@@ -140,7 +136,7 @@ def index():
 @app.route("/new-round", methods=["POST"])
 def new_round():
     if not ready:
-        return jsonify({"error": "Service is still loading word vectors — try again in a minute."}), 503
+        return jsonify({"error": "Service is still loading — try again in a minute."}), 503
 
     data           = request.get_json(force=True) or {}
     requested_word = (data.get("word") or "").strip().lower()
@@ -152,11 +148,13 @@ def new_round():
     else:
         secret_idx = random.choice(GAME_POOL)
 
-    secret_word      = VALID_WORDS[secret_idx]
-    round_id         = str(uuid.uuid4())[:8]
-    rounds[round_id] = {"secret_word": secret_word, "ranks": build_rankings(secret_idx)}
+    secret_word = VALID_WORDS[secret_idx]
+    secret_vec  = MATRIX_NORM[secret_idx].copy()  # store just this one vector
+    round_id    = str(uuid.uuid4())[:8]
 
-    if len(rounds) > 10:
+    rounds[round_id] = {"secret_word": secret_word, "secret_vec": secret_vec}
+
+    if len(rounds) > 20:
         del rounds[next(iter(rounds))]
 
     return jsonify({"round_id": round_id, "word_length": len(secret_word)})
@@ -177,12 +175,15 @@ def guess():
         return jsonify({"error": "Empty guess"}), 400
 
     r = rounds[round_id]
+
     if word == r["secret_word"]:
         return jsonify({"rank": 1, "correct": True, "word": word})
+
     if word not in WORD_TO_IDX:
         return jsonify({"error": "unknown_word", "word": word}), 200
 
-    return jsonify({"rank": int(r["ranks"][WORD_TO_IDX[word]]), "correct": False, "word": word})
+    rank = get_rank(r["secret_vec"], WORD_TO_IDX[word])
+    return jsonify({"rank": rank, "correct": False, "word": word})
 
 @app.route("/reveal/<round_id>", methods=["GET"])
 def reveal(round_id):
